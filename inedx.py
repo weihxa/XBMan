@@ -5,5 +5,6 @@ from Module import Passwd
 
 a= Passwd.jiami()
 
-d = a.encrypt('123456')
+d = a.encrypt('123123')
 print d
+print a.decrypt(d)
