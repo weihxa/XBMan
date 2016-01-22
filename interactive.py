@@ -18,9 +18,11 @@
 
 
 import socket
+#import paramiko
 import sys
 from paramiko.py3compat import u
 import time
+import os
 # windows does not have termios...
 try:
     import termios
@@ -30,14 +32,14 @@ except ImportError:
     has_termios = False
 
 
-def interactive_shell(chan):
+def interactive_shell(chan,hostname,username,sa_username):
     if has_termios:
-        posix_shell(chan)
+        posix_shell(chan,hostname,username,sa_username)
     else:
         windows_shell(chan)
 
 
-def posix_shell(chan):
+def posix_shell(chan,hostname,username,sa_username):
     import select
     
     oldtty = termios.tcgetattr(sys.stdin)
@@ -45,14 +47,16 @@ def posix_shell(chan):
         tty.setraw(sys.stdin.fileno())
         tty.setcbreak(sys.stdin.fileno())
         chan.settimeout(0.0)
-	records=[]
-	f = open('records.txt','ab+')
+        date = time.strftime('%Y_%m_%d')
+        records=[]
+        f = open('%s_%s_records.txt' % (date,hostname),'ab+')
         while True:
             r, w, e = select.select([chan, sys.stdin], [], [])
             if chan in r:
                 try:
                     x = u(chan.recv(1024))
                     if len(x) == 0:
+                        os.system('clear')
                         sys.stdout.write('\r\n*** 再见 ***\r\n')
                         break
                     sys.stdout.write(x)
@@ -61,20 +65,20 @@ def posix_shell(chan):
                     pass
             if sys.stdin in r:
                 x = sys.stdin.read(1)
-		records.append(x)
-		if x == '\r':
-		    c_time = time.strftime('%Y-%m-%d %H:%M:%S')
-		    cmd = ''.join(records).replace('\r','\n')
-		    log = '%s    %s' %(c_time,cmd)
-		    f.write(log)
-		    records=[]
+                records.append(x)
+                if x == '\r':
+                    c_time = time.strftime('%Y-%m-%d %H:%M:%S')
+                    cmd = ''.join(records).replace('\r','\n')
+                    log = '%s    %s    %s    %s' %(hostname,c_time,sa_username,cmd)
+                    f.write(log)
+                    records=[]
                 if len(x) == 0:
                     break
                 chan.send(x)
 
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
-	f.close()
+        f.close()
 
     
 # thanks to Mike Looijmans for this code

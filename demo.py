@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#encoding:utf-8
+#_*_coding:utf-8_*_
 # Copyright (C) 2003-2007  Robey Pointer <robeypointer@gmail.com>
 #
 # This file is part of paramiko.
@@ -29,7 +29,9 @@ import sys
 import time
 import traceback
 from paramiko.py3compat import input
-
+from Module import Mysql_sql
+from Module import Passwd
+import MySQLdb
 import paramiko
 try:
     import interactive
@@ -58,8 +60,8 @@ def agent_auth(transport, username):
             print('... nope.')
 
 
-def manual_auth(username, hostname):
-    default_auth = 'p'
+def manual_auth(username, hostname,pw):
+    '''default_auth = 'p'
     #auth = input('Auth by (p)assword, (r)sa key, or (d)ss key? [%s] ' % default_auth)
     auth = 'P'
     if len(auth) == 0:
@@ -90,97 +92,135 @@ def manual_auth(username, hostname):
     else:
         #pw = getpass.getpass('Password for %s@%s: ' % (username, hostname))
         pw = '123123'
-        t.auth_password(username, pw)
+        '''
+    t.auth_password(username, pw)
 
-
-# setup logging
-paramiko.util.log_to_file('demo.log')
-
-username = ''
-if len(sys.argv) > 1:
-    hostname = sys.argv[1]
-    if hostname.find('@') >= 0:
-        username, hostname = hostname.split('@')
-else:
-    #hostname = input('Hostname: ')
-    hostname = '127.0.0.1'
-if len(hostname) == 0:
-    print('*** Hostname required.')
-    sys.exit(1)
-port = 22
-if hostname.find(':') >= 0:
-    hostname, portstr = hostname.split(':')
-    port = int(portstr)
-
-# now connect
-try:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((hostname, port))
-except Exception as e:
-    print('*** Connect failed: ' + str(e))
-    traceback.print_exc()
-    sys.exit(1)
-
-try:
-    t = paramiko.Transport(sock)
-    try:
-        t.start_client()
-    except paramiko.SSHException:
-        print('*** SSH negotiation failed.')
-        sys.exit(1)
-
-    try:
-        keys = paramiko.util.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
-    except IOError:
-        try:
-            keys = paramiko.util.load_host_keys(os.path.expanduser('~/ssh/known_hosts'))
-        except IOError:
-            #print('*** Unable to open host keys file')
-            keys = {}
-
-    # check server's host key -- this is important.
-    key = t.get_remote_server_key()
-    if hostname not in keys:
-        print('*** WARNING: Unknown host key!')
-    elif key.get_name() not in keys[hostname]:
-        print('*** WARNING: Unknown host key!')
-    elif keys[hostname][key.get_name()] != key:
-        print('*** WARNING: Host key has changed!!!')
-        sys.exit(1)
+def login(username,password):
+    aa = Mysql_sql.MysqlHelper()
+    sql = "select password from user where username ='%s';" %username
+    #params = Username
+    c=aa.Get_one(sql)
+    if password == Passwd.jiami().decrypt(c[0][0]):
+        print '登陆成功'
+        return False
     else:
-        print('*** Host key OK.')
+        print '登陆失败'
+os.system('clear')
+while True:
+    User_name = input('Please enter your user :')
+    Pass_wd = input('Please enter your password :')
+    os.system('clear')
+    if login(User_name,Pass_wd) ==False:
+        break
+HQ = Mysql_sql.MysqlHelper()
+#print HQ.IP_lite(User_name)
+List=HQ.IP_lite(User_name)
+while True:
+    for key,values in List.items():
+        print key,values
+    BH=input('\033[3;36;40m'+'请输入主机编号(退出:exit)：\n'+'\033[0m')
+    if BH =='exit':
+        os.system('clear')
+        exit()
+    else:
+        # setup logging
+        paramiko.util.log_to_file('demo.log')
 
-    # get username
-    if username == '':
-        default_username = getpass.getuser()
-        #username = input('Username [%s]: ' % default_username)
-        username = 'whx'
-        if len(username) == 0:
-            username = default_username
+        username = ''
+        if len(sys.argv) > 1:
+            hostname = sys.argv[1]
+            if hostname.find('@') >= 0:
+                username, hostname = hostname.split('@')
+        else:
+            #hostname = input('Hostname: ')
+            hostname = List[int(BH)]
+        if len(hostname) == 0:
+            print('*** Hostname required.')
+            sys.exit(1)
+        port = 22
+        if hostname.find(':') >= 0:
+            hostname, portstr = hostname.split(':')
+            port = int(portstr)
 
-    agent_auth(t, username)
-    if not t.is_authenticated():
-        manual_auth(username, hostname)
-    if not t.is_authenticated():
-        print('*** Authentication failed. :(')
-        t.close()
-        sys.exit(1)
+        # now connect
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((hostname, port))
+        except Exception as e:
+            print('*** Connect failed: ' + str(e))
+            traceback.print_exc()
+            sys.exit(1)
 
-    chan = t.open_session()
-    chan.get_pty()
-    chan.invoke_shell()
-    print('!!!谨慎操作，切勿犯错!!!\n')
-    interactive.interactive_shell(chan)
-    chan.close()
-    t.close()
+        try:
+            t = paramiko.Transport(sock)
+            try:
+                t.start_client()
+            except paramiko.SSHException:
+                print('*** SSH negotiation failed.')
+                sys.exit(1)
 
-except Exception as e:
-    print('*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
-    traceback.print_exc()
-    try:
-        t.close()
-    except:
-        pass
-    sys.exit(1)
+            try:
+                keys = paramiko.util.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
+            except IOError:
+                try:
+                    keys = paramiko.util.load_host_keys(os.path.expanduser('~/ssh/known_hosts'))
+                except IOError:
+                    #print('*** Unable to open host keys file')
+                    keys = {}
+
+            # check server's host key -- this is important.
+            key = t.get_remote_server_key()
+            if hostname not in keys:
+                print('*** WARNING: Unknown host key!')
+            elif key.get_name() not in keys[hostname]:
+                print('*** WARNING: Unknown host key!')
+            elif keys[hostname][key.get_name()] != key:
+                print('*** WARNING: Host key has changed!!!')
+                sys.exit(1)
+            else:
+                print('*** Host key OK.')
+
+            # get username
+            '''
+            if username == '':
+                default_username = getpass.getuser()
+                #username = input('Username [%s]: ' % default_username)
+                username = 'whx'
+                if len(username) == 0:
+                    username = default_username
+                    '''
+            User=Mysql_sql.MysqlHelper()
+            sql = "select username,password from server where ip ='%s';" %hostname
+            Dict=User.Get_dict(sql)
+            username = Dict['username']
+            password = Passwd.jiami().decrypt(Dict['password'])
+            sa_username = User_name+'('+Dict['username']+')'
+
+            agent_auth(t, username)
+            if not t.is_authenticated():
+                manual_auth(username, hostname,password)
+            if not t.is_authenticated():
+                print('*** Authentication failed. :(')
+                t.close()
+                sys.exit(1)
+
+            chan = t.open_session()
+            chan.get_pty()
+            chan.invoke_shell()
+            os.system('clear')
+            print('\033[3;36;40m'+'已登陆:%s\n'%str(hostname)+'\033[0m' )
+            print('\033[3;31;40m'+'!!!谨慎操作，切勿犯错!!!\n'+'\033[0m')
+            interactive.interactive_shell(chan,hostname,username,sa_username)
+            chan.close()
+            t.close()
+
+        except Exception as e:
+            print('*** Caught exception: ' + str(e.__class__) + ': ' + str(e))
+            traceback.print_exc()
+            try:
+                t.close()
+            except:
+                pass
+            sys.exit(1)
 
 
