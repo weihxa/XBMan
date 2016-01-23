@@ -105,23 +105,87 @@ def login(username,password):
         return False
     else:
         print '登陆失败'
+
+def Add_user(username,password):
+    Xpasswd=Passwd.jiami().encrypt(password)
+    sql="insert into user(username,password) values('%s','%s');"%(username,Xpasswd)
+    X_password=Mysql_sql.MysqlHelper().In_sql(sql)
+    print('\033[3;31;40m'+'添加成功!\n'+'\033[0m')
+
+def Add_server(ip,username,password):
+    Xpasswd=Passwd.jiami().encrypt(password)
+    sql="insert into server(ip,username,password) values('%s','%s','%s');"%(ip,username,Xpasswd)
+    X_password=Mysql_sql.MysqlHelper().In_sql(sql)
+    print('\033[3;31;40m'+'添加成功!\n'+'\033[0m')
 os.system('clear')
 while True:
-    User_name = input('Please enter your user :')
-    Pass_wd = input('Please enter your password :')
+    User_name = input('Please enter your user :').strip()
+    if len(User_name) == 0:
+        print('不得为空')
+        continue
+    Pass_wd = input('Please enter your password :').strip()
+    if len(User_name) == 0:
+        print('不得为空')
+        continue
     os.system('clear')
     if login(User_name,Pass_wd) ==False:
         break
 HQ = Mysql_sql.MysqlHelper()
 #print HQ.IP_lite(User_name)
 List=HQ.IP_lite(User_name)
+if User_name =='admin':
+    List[0]='权限管理'
+else:
+    List[0]='修改密码'
 while True:
     for key,values in List.items():
         print key,values
     BH=input('\033[3;36;40m'+'请输入主机编号(退出:exit)：\n'+'\033[0m')
-    if BH =='exit':
+    if len(BH) == 0:
+        os.system('clear')
+        continue
+    elif BH =='exit':
         os.system('clear')
         exit()
+    elif int(BH)== 0 and User_name=='admin':
+        while True:
+            BH=input('1  添加主机\n2  修改密码:\n3  添加用户\n请输入编号(退出:exit)')
+            if BH == '1':
+                add_ip = input('请输入ip:').strip()
+                add_user = input('请输入用户名：').strip()
+                add_passwd = input('请输入密码:').strip()
+                Add_server(add_ip,add_user,add_passwd)
+            elif BH == '2':
+                os.system('clear')
+                X_passwd=input('输入新密码(exit):')
+                if X_passwd == 'exit':
+                    continue
+                else:
+                    Xpasswd=Passwd.jiami().encrypt(X_passwd)
+                    sql="update user set password='%s' where username='%s';"%(Xpasswd,User_name)
+                    X_password=Mysql_sql.MysqlHelper().In_sql(sql)
+                    print('\033[3;31;40m'+'修改成功!\n'+'\033[0m')
+                    time.sleep(1)
+            elif BH == '3':
+                add_user = input('请输入用户名：').strip()
+                add_passwd = input('请输入密码:').strip()
+                Add_user(add_user,add_passwd)
+            elif BH == 'exit':
+                break
+    elif int(BH)== 0 and User_name!='admin':
+        os.system('clear')
+        X_passwd=input('输入新密码(exit):')
+        if X_passwd == 'exit':
+            continue
+        else:
+            Xpasswd=Passwd.jiami().encrypt(X_passwd)
+            sql="update user set password='%s' where username='%s';"%(Xpasswd,User_name)
+            X_password=Mysql_sql.MysqlHelper().In_sql(sql)
+            print('\033[3;31;40m'+'修改成功!\n'+'\033[0m')
+            time.sleep(1)
+    elif int(BH) not in List.keys():
+        print('\033[3;31;40m'+'无此序号！请重新输入.\n'+'\033[0m')
+        continue
     else:
         # setup logging
         paramiko.util.log_to_file('demo.log')

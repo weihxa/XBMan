@@ -49,11 +49,11 @@ class MysqlHelper(object):
         conn.close()
         return data
 
-    def In_log(self,sql,params):
+    def In_sql(self,sql):
         conn = MySQLdb.connect(**self.__conn_dict)
         cur = conn.cursor()
         #cur = conn.cursor(cursorclass = MySQLdb.cursors.DictCursor)
-        reCount = cur.execute(sql,params)
+        reCount = cur.execute(sql)
         data = cur.fetchone()
         conn.commit()
         cur.close()
