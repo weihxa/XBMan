@@ -4,18 +4,6 @@
 import MySQLdb
 import conf
 
-'''
-conn = MySQLdb.connect(host='192.168.215.237',user='root',passwd='root',db='test2')
-cur = conn.cursor()
-reCount = cur.execute('select * from tab1 ')
-data = cur.fetchall()
-cur.close()
-conn.close()
-
-print reCount
-print data
-'''
-
 class MysqlHelper(object):
 
     def __init__(self):
